@@ -39,7 +39,7 @@ class GeminiLiveClient(
     companion object {
         private const val TAG = "GeminiLiveClient"
         // Primary Live model supporting real-time native audio bidirectional streaming
-        const val MODEL_LIVE = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+        const val MODEL_LIVE = "models/gemini-3.8-live"
         const val MODEL_LIVE_FALLBACK = "models/gemini-3.1-flash-live-preview"
         const val PREFERRED_VOICE = "Aoede" // Lively, young, expressive voice for Arushi
 
@@ -69,6 +69,7 @@ class GeminiLiveClient(
     private var isConnected = false
     private var setupComplete = false
     private var currentModel = MODEL_LIVE
+    private var pendingText: String? = null
     private val scope = CoroutineScope(Dispatchers.IO)
     private var reconnectJob: Job? = null
 
@@ -79,7 +80,7 @@ class GeminiLiveClient(
             return
         }
 
-        currentModel = model
+        currentModel = MODEL_LIVE
         disconnect()
 
         onStateChanged(LiveState.CONNECTING)
@@ -152,6 +153,8 @@ class GeminiLiveClient(
                         put("parts", parts)
                     }
                     put("systemInstruction", sysInstruction)
+                    put("inputAudioTranscription", JSONObject())
+                    put("outputAudioTranscription", JSONObject())
 
                     // Safe Android Tools
                     put("tools", buildToolsDeclarations())
@@ -271,7 +274,14 @@ class GeminiLiveClient(
 
     fun sendText(text: String) {
         val cleanText = text.trim()
-        if (cleanText.isBlank() || !isConnected || !setupComplete) return
+        if (cleanText.isBlank()) return
+
+        if (!isConnected || !setupComplete) {
+            pendingText = cleanText
+            onLog("[GEMINI] Text queued until session is ready.")
+            return
+        }
+
         try {
             val payload = JSONObject().apply {
                 put("realtimeInput", JSONObject().apply {
@@ -279,9 +289,9 @@ class GeminiLiveClient(
                 })
             }
             webSocket?.send(payload.toString())
-            onLog("[GEMINI TEXT] Prompt sent.")
+            onLog("[GEMINI] Text sent.")
         } catch (e: Exception) {
-            onLog("[GEMINI TEXT ERROR] " + (e.message ?: "unknown error"))
+            onLog("[GEMINI] Text send error: " + (e.message ?: "unknown"))
         }
     }
 
@@ -295,8 +305,12 @@ class GeminiLiveClient(
             // Setup complete acknowledgement
             if (root.has("setupComplete")) {
                 setupComplete = true
-                onLog("[GEMINI LIVE] Setup completed and ready! Live session active.")
+                onLog("[GEMINI] Arushi is awake and listening.")
                 onStateChanged(LiveState.LISTENING)
+                pendingText?.let { queued ->
+                    pendingText = null
+                    sendText(queued)
+                }
                 return
             }
 
@@ -416,9 +430,10 @@ class GeminiLiveClient(
         }
     }
 
-    fun isSessionActive(): Boolean = isConnected
+    fun isSessionActive(): Boolean = isConnected && setupComplete
 
     fun disconnect() {
+        pendingText = null
         if (isConnected || webSocket != null) {
             onLog("[GEMINI LIVE] Disconnecting session...")
             try {

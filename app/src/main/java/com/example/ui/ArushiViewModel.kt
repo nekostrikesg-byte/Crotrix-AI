@@ -236,6 +236,30 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun onMicrophonePermissionChanged(granted: Boolean) {
+        if (!granted) {
+            audioRecorder.stopRecording()
+            if (_uiState.value.apiKey.isNotBlank()) {
+                _uiState.update {
+                    it.copy(
+                        state = GeminiLiveClient.LiveState.IDLE,
+                        statusMessage = "Microphone permission is required for Arushi."
+                    )
+                }
+            }
+            return
+        }
+
+        val key = _uiState.value.apiKey.trim()
+        if (key.isNotBlank() && key != "MY_GEMINI_API_KEY") {
+            if (_uiState.value.state == GeminiLiveClient.LiveState.IDLE ||
+                _uiState.value.state == GeminiLiveClient.LiveState.ERROR
+            ) {
+                startSession()
+            }
+        }
+    }
+
     fun updateApiKey(newKey: String) {
         val cleanKey = newKey.trim()
         prefs.edit().putString("gemini_api_key", cleanKey).apply()

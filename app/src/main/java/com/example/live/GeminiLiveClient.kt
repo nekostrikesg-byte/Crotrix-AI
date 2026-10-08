@@ -44,7 +44,7 @@ class GeminiLiveClient(
         const val PREFERRED_VOICE = "Aoede" // Lively, young, expressive voice for Arushi
 
         private const val WS_BASE_URL =
-            "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent"
+            "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 
         private const val SYSTEM_INSTRUCTION =
             "You are Arushi, a young, confident, witty, playful, and emotionally responsive virtual assistant. " +
@@ -125,47 +125,38 @@ class GeminiLiveClient(
 
     private fun sendInitialSetup() {
         try {
-            val setupObj = JSONObject().apply {
-                val setup = JSONObject().apply {
-                    put("model", currentModel)
-                    
-                    // Generation configuration: Native AUDIO response
-                    val genConfig = JSONObject().apply {
-                        put("responseModalities", JSONArray().apply { put("AUDIO") })
-                        val speechConfig = JSONObject().apply {
-                            val voiceConfig = JSONObject().apply {
-                                val prebuilt = JSONObject().apply {
-                                    put("voiceName", PREFERRED_VOICE)
-                                }
-                                put("prebuiltVoiceConfig", prebuilt)
-                            }
-                            put("voiceConfig", voiceConfig)
-                        }
-                        put("speechConfig", speechConfig)
-                    }
-                    put("generationConfig", genConfig)
+            val setup = JSONObject().apply {
+                put("model", currentModel)
+                put("responseModalities", JSONArray().apply { put("AUDIO") })
+                put("speechConfig", JSONObject().apply {
+                    put("voiceConfig", JSONObject().apply {
+                        put("prebuiltVoiceConfig", JSONObject().apply {
+                            put("voiceName", PREFERRED_VOICE)
+                        })
+                    })
+                })
+                put("systemInstruction", JSONObject().apply {
+                    put("parts", JSONArray().apply {
+                        put(JSONObject().apply { put("text", SYSTEM_INSTRUCTION) })
+                    })
+                })
+                put("inputAudioTranscription", JSONObject())
+                put("outputAudioTranscription", JSONObject())
+            }
 
-                    // System Instruction: Arushi personality & multi-language
-                    val sysInstruction = JSONObject().apply {
-                        val parts = JSONArray().apply {
-                            put(JSONObject().apply { put("text", SYSTEM_INSTRUCTION) })
-                        }
-                        put("parts", parts)
-                    }
-                    put("systemInstruction", sysInstruction)
-                    put("inputAudioTranscription", JSONObject())
-                    put("outputAudioTranscription", JSONObject())
-
-                }
+            val payload = JSONObject().apply {
                 put("setup", setup)
             }
 
-            val payload = setupObj.toString()
-            onLog("[GEMINI LIVE] Sending setup payload (length=${payload.length})")
-            webSocket?.send(payload)
+            onLog("[GEMINI] Sending Live setup...")
+            if (webSocket?.send(payload.toString()) != true) {
+                onLog("[GEMINI] Setup send failed.")
+                onStateChanged(LiveState.ERROR)
+            }
         } catch (e: Exception) {
-            onLog("[GEMINI LIVE ERROR] Error constructing setup payload: ${e.message}")
-            Log.e(TAG, "Setup payload construction error", e)
+            onLog("[GEMINI] Setup error: " + (e.message ?: "unknown"))
+            Log.e(TAG, "Setup error", e)
+            onStateChanged(LiveState.ERROR)
         }
     }
 

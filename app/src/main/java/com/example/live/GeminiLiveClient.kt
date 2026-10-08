@@ -156,8 +156,6 @@ class GeminiLiveClient(
                     put("inputAudioTranscription", JSONObject())
                     put("outputAudioTranscription", JSONObject())
 
-                    // Safe Android Tools
-                    put("tools", buildToolsDeclarations())
                 }
                 put("setup", setup)
             }

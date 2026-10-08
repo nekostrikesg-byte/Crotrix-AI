@@ -149,19 +149,24 @@ jobs:
 
           echo "Creating GitHub Release with tag: $TAG"
 
+          NOTES_FILE="${RUNNER_TEMP}/release_notes.md"
+          {
+            echo "### Debug APK Build"
+            echo "- **Build Type:** Automatically generated debug APK"
+            echo "- **Built By:** GitHub Actions"
+            echo "- **Run Number:** ${{ github.run_number }}"
+            echo "- **Run Attempt:** ${{ github.run_attempt }}"
+            echo "- **Source Commit:** ${{ github.sha }}"
+            echo "- **Signing:** Temporary debug keystore"
+            echo ""
+            echo "> **Testing Notice:** This APK is generated for testing and verification purposes only. It is not an official Play Store production release."
+          } > "$NOTES_FILE"
+
           gh release create "$TAG" "$ASSET_PATH" \
             --title "$TITLE" \
             --target "${{ github.sha }}" \
             --latest \
-            --notes "### Debug APK Build
-- **Build Type:** Automatically generated debug APK
-- **Built By:** GitHub Actions
-- **Run Number:** ${{ github.run_number }}
-- **Run Attempt:** ${{ github.run_attempt }}
-- **Source Commit:** ${{ github.sha }}
-- **Signing:** Temporary debug keystore
-
-> **Testing Notice:** This APK is generated for testing and verification purposes only. It is not an official Play Store production release."
+            --notes-file "$NOTES_FILE"
 
           echo "release_tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "release_title=${TITLE}" >> "$GITHUB_OUTPUT"

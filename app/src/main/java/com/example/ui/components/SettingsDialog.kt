@@ -53,9 +53,9 @@ fun SettingsDialog(
     var isKeyVisible by remember { mutableStateOf(false) }
 
     val models = listOf(
-        GeminiLiveClient.MODEL_LIVE to "Gemini 2.5 Flash Native Audio (Recommended)",
-        "models/gemini-2.0-flash-exp" to "Gemini 2.0 Flash Live Preview",
-        "models/gemini-2.0-flash" to "Gemini 2.0 Flash"
+        GeminiLiveClient.MODEL_LIVE to "Gemini 2.0 Flash Live (Recommended)",
+        GeminiLiveClient.MODEL_LIVE_FALLBACK to "Gemini 2.0 Flash (Stable)",
+        "models/gemini-2.5-flash" to "Gemini 2.5 Flash"
     )
 
     AlertDialog(

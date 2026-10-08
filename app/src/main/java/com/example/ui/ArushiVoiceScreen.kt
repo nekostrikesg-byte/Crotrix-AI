@@ -257,10 +257,7 @@ fun ArushiVoiceScreen(
             // Quick suggestion chips
             QuickSuggestions(
                 onSelectSuggestion = { suggestion ->
-                    // If session idle, start it
-                    if (uiState.state == GeminiLiveClient.LiveState.IDLE) {
-                        viewModel.toggleSession()
-                    }
+                    viewModel.sendPrompt(suggestion)
                 }
             )
 
@@ -440,10 +437,11 @@ private fun QuickSuggestions(
     onSelectSuggestion: (String) -> Unit
 ) {
     val suggestions = listOf(
+        "👋 Say Hi",
+        "Namaste Arushi",
         "Open WhatsApp",
         "Call Mom",
         "Open YouTube",
-        "WhatsApp kholo",
         "Kya haal hai?",
         "Tell me a joke"
     )

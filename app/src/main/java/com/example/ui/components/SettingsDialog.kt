@@ -53,8 +53,7 @@ fun SettingsDialog(
     var isKeyVisible by remember { mutableStateOf(false) }
 
     val models = listOf(
-        GeminiLiveClient.MODEL_LIVE to "Gemini 2.0 Flash Live (Recommended)",
-        GeminiLiveClient.MODEL_LIVE_FALLBACK to "Gemini 3.1 Flash Live"
+        GeminiLiveClient.MODEL_LIVE to "Gemini 3.8 Live"
     )
 
     AlertDialog(
@@ -65,7 +64,7 @@ fun SettingsDialog(
         shape = RoundedCornerShape(20.dp),
         title = {
             Text(
-                text = "Arushi Settings",
+                text = "Arushi",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
                 color = Color(0xFF00E5FF)
@@ -80,7 +79,7 @@ fun SettingsDialog(
                     color = Color.White
                 )
                 Text(
-                    text = "Saved locally on this device.",
+                    text = "Your API key is saved on this device.",
                     fontSize = 11.sp,
                     color = Color.Gray
                 )
@@ -118,7 +117,7 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Live Model",
+                    text = "Voice model",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     color = Color.White

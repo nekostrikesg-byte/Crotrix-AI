@@ -41,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +77,12 @@ fun ArushiVoiceScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showLogsSheet by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.apiKey) {
+        if (uiState.apiKey.isBlank()) {
+            showSettingsDialog = true
+        }
+    }
 
     // Space cosmic gradient background
     val backgroundBrush = Brush.verticalGradient(

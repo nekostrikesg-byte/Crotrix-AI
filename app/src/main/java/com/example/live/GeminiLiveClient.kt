@@ -67,6 +67,7 @@ class GeminiLiveClient(
 
     private var webSocket: WebSocket? = null
     private var isConnected = false
+    private var setupComplete = false
     private var currentModel = MODEL_LIVE
     private val scope = CoroutineScope(Dispatchers.IO)
     private var reconnectJob: Job? = null
@@ -92,8 +93,8 @@ class GeminiLiveClient(
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 isConnected = true
                 onLog("[GEMINI LIVE] WebSocket connected successfully! Response code: ${response.code}")
+                setupComplete = false
                 sendInitialSetup()
-                onStateChanged(LiveState.LISTENING)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -251,21 +252,16 @@ class GeminiLiveClient(
      * Streams real-time 16kHz PCM audio chunk from microphone to Gemini Live session.
      */
     fun sendAudioChunk(pcmChunk: ByteArray) {
-        if (!isConnected || webSocket == null) return
-
+        if (!isConnected || !setupComplete || webSocket == null) return
         try {
             val base64Data = Base64.encodeToString(pcmChunk, Base64.NO_WRAP)
             val json = JSONObject().apply {
-                val realtimeInput = JSONObject().apply {
-                    val mediaChunks = JSONArray().apply {
-                        put(JSONObject().apply {
-                            put("mimeType", "audio/pcm;rate=16000")
-                            put("data", base64Data)
-                        })
-                    }
-                    put("mediaChunks", mediaChunks)
-                }
-                put("realtimeInput", realtimeInput)
+                put("realtimeInput", JSONObject().apply {
+                    put("audio", JSONObject().apply {
+                        put("data", base64Data)
+                        put("mimeType", "audio/pcm;rate=16000")
+                    })
+                })
             }
             webSocket?.send(json.toString())
         } catch (e: Exception) {
@@ -273,7 +269,23 @@ class GeminiLiveClient(
         }
     }
 
-    fun sendText(text: String) {\n        val cleanText = text.trim()\n        if (cleanText.isBlank() || !isConnected || !setupComplete) return\n        webSocket?.send(JSONObject().apply { put("realtimeInput", JSONObject().apply { put("text", cleanText) }) }.toString())\n        onLog("[GEMINI TEXT] Prompt sent.")\n    }\n\n    /**
+    fun sendText(text: String) {
+        val cleanText = text.trim()
+        if (cleanText.isBlank() || !isConnected || !setupComplete) return
+        try {
+            val payload = JSONObject().apply {
+                put("realtimeInput", JSONObject().apply {
+                    put("text", cleanText)
+                })
+            }
+            webSocket?.send(payload.toString())
+            onLog("[GEMINI TEXT] Prompt sent.")
+        } catch (e: Exception) {
+            onLog("[GEMINI TEXT ERROR] " + (e.message ?: "unknown error"))
+        }
+    }
+
+    /**
      * Parses incoming JSON message from Gemini Live WebSocket.
      */
     private fun handleIncomingMessage(text: String) {

@@ -239,6 +239,7 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
     fun onMicrophonePermissionChanged(granted: Boolean) {
         if (!granted) {
             audioRecorder.stopRecording()
+            liveClient.disconnect()
             if (_uiState.value.apiKey.isNotBlank()) {
                 _uiState.update {
                     it.copy(
@@ -251,12 +252,22 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         val key = _uiState.value.apiKey.trim()
-        if (key.isNotBlank() && key != "MY_GEMINI_API_KEY") {
-            if (_uiState.value.state == GeminiLiveClient.LiveState.IDLE ||
-                _uiState.value.state == GeminiLiveClient.LiveState.ERROR
-            ) {
-                startSession()
+        if (key.isBlank() || key == "MY_GEMINI_API_KEY") return
+
+        if (liveClient.isSessionActive()) {
+            if (!audioRecorder.isRecordingActive()) {
+                val started = audioRecorder.startRecording()
+                if (!started) {
+                    _uiState.update {
+                        it.copy(
+                            state = GeminiLiveClient.LiveState.IDLE,
+                            statusMessage = "Microphone is not available."
+                        )
+                    }
+                }
             }
+        } else {
+            startSession()
         }
     }
 

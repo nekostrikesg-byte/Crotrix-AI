@@ -95,13 +95,33 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
             audioPlayer = audioPlayer,
             deviceActionHandler = deviceActionHandler,
             onStateChanged = { state ->
+                when (state) {
+                    GeminiLiveClient.LiveState.LISTENING -> {
+                        if (!audioRecorder.isRecordingActive()) {
+                            val started = audioRecorder.startRecording()
+                            if (!started) {
+                                logEvent("[MIC] Could not start microphone.")
+                            }
+                        }
+                    }
+                    GeminiLiveClient.LiveState.ERROR -> {
+                        audioRecorder.stopRecording()
+                    }
+                    GeminiLiveClient.LiveState.IDLE -> {
+                        audioRecorder.stopRecording()
+                    }
+                    else -> Unit
+                }
+
                 _uiState.update { current ->
                     val msg = when (state) {
-                        GeminiLiveClient.LiveState.IDLE -> "Tap to talk with Arushi"
-                        GeminiLiveClient.LiveState.CONNECTING -> "Connecting to Arushi..."
+                        GeminiLiveClient.LiveState.IDLE -> {
+                            if (current.apiKey.isBlank()) "Add your Gemini API key in Settings" else "Tap to talk with Arushi"
+                        }
+                        GeminiLiveClient.LiveState.CONNECTING -> "Waking Arushi..."
                         GeminiLiveClient.LiveState.LISTENING -> "Arushi is listening..."
                         GeminiLiveClient.LiveState.SPEAKING -> "Arushi is speaking..."
-                        GeminiLiveClient.LiveState.ERROR -> "Connection issue. Check API Key or Network."
+                        GeminiLiveClient.LiveState.ERROR -> "Arushi could not connect. Check the API key or internet."
                     }
                     current.copy(state = state, statusMessage = msg)
                 }
@@ -149,6 +169,8 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
             },
             onLog = { logEvent(it) }
         )
+
+        wakeOnLaunchIfConfigured()
     }
 
     fun toggleSession() {
@@ -185,17 +207,7 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
         // 1. Connect Gemini Live WebSocket
         liveClient.connect(apiKey = key, model = _uiState.value.model)
 
-        // 2. Start microphone capture
-        val micStarted = audioRecorder.startRecording()
-        if (!micStarted) {
-            logEvent("[ERROR] Failed to start microphone recording")
-            _uiState.update {
-                it.copy(
-                    state = GeminiLiveClient.LiveState.ERROR,
-                    statusMessage = "Microphone error. Check permissions."
-                )
-            }
-        }
+
     }
 
     fun stopSession() {
@@ -229,6 +241,16 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
         prefs.edit().putString("gemini_api_key", cleanKey).apply()
         _uiState.update { it.copy(apiKey = cleanKey) }
         logEvent("[CONFIG] API key saved locally.")
+
+        if (cleanKey.isBlank() || cleanKey == "MY_GEMINI_API_KEY") {
+            stopSession()
+        } else {
+            stopSession()
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(200)
+                startSession()
+            }
+        }
     }
 
     fun updateModel(newModel: String) {
@@ -262,6 +284,18 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
             // Keep last 100 log lines
             val updated = (current.logs + formatted).takeLast(100)
             current.copy(logs = updated)
+        }
+    }
+
+    private fun wakeOnLaunchIfConfigured() {
+        val key = _uiState.value.apiKey.trim()
+        if (key.isBlank() || key == "MY_GEMINI_API_KEY") return
+
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(300)
+            if (_uiState.value.state == GeminiLiveClient.LiveState.IDLE) {
+                startSession()
+            }
         }
     }
 

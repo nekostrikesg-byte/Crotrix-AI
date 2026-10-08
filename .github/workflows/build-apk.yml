@@ -44,9 +44,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
+          validate-wrappers: false
 
       - name: Create temporary debug keystore
         run: |
+          if [ -n "$ANDROID_HOME" ] && [ -d "$ANDROID_HOME/cmdline-tools/latest/bin" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          fi
           if [ ! -f "./debug.keystore" ]; then
             echo "Generating temporary debug keystore..."
             keytool -genkeypair \

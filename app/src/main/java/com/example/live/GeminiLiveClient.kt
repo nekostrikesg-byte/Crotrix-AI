@@ -40,6 +40,7 @@ class GeminiLiveClient(
         private const val TAG = "GeminiLiveClient"
         // Primary Live model supporting real-time native audio bidirectional streaming
         const val MODEL_LIVE = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+        const val MODEL_LIVE_FALLBACK = "models/gemini-3.1-flash-live-preview"
         const val PREFERRED_VOICE = "Aoede" // Lively, young, expressive voice for Arushi
 
         private const val WS_BASE_URL =
@@ -272,7 +273,7 @@ class GeminiLiveClient(
         }
     }
 
-    /**
+    fun sendText(text: String) {\n        val cleanText = text.trim()\n        if (cleanText.isBlank() || !isConnected || !setupComplete) return\n        webSocket?.send(JSONObject().apply { put("realtimeInput", JSONObject().apply { put("text", cleanText) }) }.toString())\n        onLog("[GEMINI TEXT] Prompt sent.")\n    }\n\n    /**
      * Parses incoming JSON message from Gemini Live WebSocket.
      */
     private fun handleIncomingMessage(text: String) {
@@ -281,6 +282,7 @@ class GeminiLiveClient(
 
             // Setup complete acknowledgement
             if (root.has("setupComplete")) {
+                setupComplete = true
                 onLog("[GEMINI LIVE] Setup completed and ready! Live session active.")
                 onStateChanged(LiveState.LISTENING)
                 return

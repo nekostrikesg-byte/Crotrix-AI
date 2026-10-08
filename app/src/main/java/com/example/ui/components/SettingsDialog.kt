@@ -48,14 +48,13 @@ fun SettingsDialog(
     onSave: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var apiKeyText by remember { mutableStateOf(currentApiKey) }
-    var selectedModel by remember { mutableStateOf(currentModel) }
+    var apiKeyText by remember(currentApiKey) { mutableStateOf(currentApiKey) }
+    var selectedModel by remember(currentModel) { mutableStateOf(currentModel) }
     var isKeyVisible by remember { mutableStateOf(false) }
 
     val models = listOf(
         GeminiLiveClient.MODEL_LIVE to "Gemini 2.0 Flash Live (Recommended)",
-        GeminiLiveClient.MODEL_LIVE_FALLBACK to "Gemini 2.0 Flash (Stable)",
-        "models/gemini-2.5-flash" to "Gemini 2.5 Flash"
+        GeminiLiveClient.MODEL_LIVE_FALLBACK to "Gemini 3.1 Flash Live"
     )
 
     AlertDialog(
@@ -81,7 +80,7 @@ fun SettingsDialog(
                     color = Color.White
                 )
                 Text(
-                    text = "Configured automatically via Secrets panel or entered here.",
+                    text = "Saved locally on this device.",
                     fontSize = 11.sp,
                     color = Color.Gray
                 )

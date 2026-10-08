@@ -84,11 +84,7 @@ fun MainContent(viewModel: ArushiViewModel) {
             viewModel.onMicrophonePermissionChanged(true)
         } else {
             permissionsLauncher.launch(
-                arrayOf(
-                    Manifest.permission.RECORD_AUDIO,
-                    Manifest.permission.READ_CONTACTS,
-                    Manifest.permission.CALL_PHONE
-                )
+                arrayOf(Manifest.permission.RECORD_AUDIO)
             )
         }
     }
@@ -141,11 +137,7 @@ fun MainContent(viewModel: ArushiViewModel) {
                         Button(
                             onClick = {
                                 permissionsLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.RECORD_AUDIO,
-                                        Manifest.permission.READ_CONTACTS,
-                                        Manifest.permission.CALL_PHONE
-                                    )
+                                    arrayOf(Manifest.permission.RECORD_AUDIO)
                                 )
                             },
                             colors = ButtonDefaults.buttonColors(

@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.BuildConfig
@@ -35,9 +36,15 @@ data class ArushiUiState(
 
 class ArushiViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val prefs = application.getSharedPreferences("crotrix_settings", Context.MODE_PRIVATE)
+
+    private fun loadApiKey(): String = prefs.getString("gemini_api_key", null)?.trim()?.takeIf { it.isNotBlank() } ?: BuildConfig.GEMINI_API_KEY
+    private fun loadModel(): String = prefs.getString("gemini_model", null)?.trim()?.takeIf { it.isNotBlank() } ?: GeminiLiveClient.MODEL_LIVE
+
     private val _uiState = MutableStateFlow(
         ArushiUiState(
-            apiKey = BuildConfig.GEMINI_API_KEY
+            apiKey = loadApiKey(),
+            model = loadModel()
         )
     )
     val uiState: StateFlow<ArushiUiState> = _uiState.asStateFlow()
@@ -218,13 +225,30 @@ class ArushiViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateApiKey(newKey: String) {
-        _uiState.update { it.copy(apiKey = newKey) }
-        logEvent("[CONFIG] Updated Gemini API Key")
+        val cleanKey = newKey.trim()
+        prefs.edit().putString("gemini_api_key", cleanKey).apply()
+        _uiState.update { it.copy(apiKey = cleanKey) }
+        logEvent("[CONFIG] API key saved locally.")
     }
 
     fun updateModel(newModel: String) {
-        _uiState.update { it.copy(model = newModel) }
-        logEvent("[CONFIG] Selected model: $newModel")
+        val cleanModel = newModel.trim().ifBlank { GeminiLiveClient.MODEL_LIVE }
+        prefs.edit().putString("gemini_model", cleanModel).apply()
+        _uiState.update { it.copy(model = cleanModel) }
+        logEvent("[CONFIG] Selected model: $cleanModel")
+    }
+
+    fun sendPrompt(prompt: String) {
+        val text = prompt.trim()
+        if (text.isBlank()) return
+        val key = _uiState.value.apiKey.trim()
+        if (key.isBlank() || key == "MY_GEMINI_API_KEY") {
+            _uiState.update { it.copy(state = GeminiLiveClient.LiveState.ERROR, statusMessage = "API Key not set. Open Settings.") }
+            return
+        }
+        if (!liveClient.isSessionActive()) liveClient.connect(key, _uiState.value.model)
+        _uiState.update { it.copy(transcriptUser = text, statusMessage = "Arushi is thinking...") }
+        liveClient.sendText(text)
     }
 
     fun clearLogs() {

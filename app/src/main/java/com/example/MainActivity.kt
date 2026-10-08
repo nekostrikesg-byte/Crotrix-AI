@@ -74,11 +74,15 @@ fun MainContent(viewModel: ArushiViewModel) {
     val permissionsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        hasMicPermission = permissions[Manifest.permission.RECORD_AUDIO] == true
+        val granted = permissions[Manifest.permission.RECORD_AUDIO] == true
+        hasMicPermission = granted
+        viewModel.onMicrophonePermissionChanged(granted)
     }
 
     LaunchedEffect(Unit) {
-        if (!hasMicPermission) {
+        if (hasMicPermission) {
+            viewModel.onMicrophonePermissionChanged(true)
+        } else {
             permissionsLauncher.launch(
                 arrayOf(
                     Manifest.permission.RECORD_AUDIO,
